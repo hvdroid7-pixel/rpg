@@ -46,22 +46,37 @@
     loading:               { label: 'Reading profile…', emoji: '⏳', color: '#8aa4ff' },
   };
 
+  const SPECIALTY_CONFIG = {
+    combate: { label: 'Combate', maxLevel: 5, perks: ['golpe_preciso', 'guardia_ferrea', 'contrataque', 'maestro_armas'] },
+    recoleccion: { label: 'Recolección', maxLevel: 5, perks: ['rastreo_fino', 'botin_extra', 'manos_rapidas', 'cartografo'] },
+    artesania: { label: 'Artesanía', maxLevel: 5, perks: ['acabado_fino', 'reciclaje', 'serie_corta', 'maestro_taller'] },
+    medicina: { label: 'Medicina', maxLevel: 5, perks: ['vendaje_rapido', 'tonico_suave', 'cirugia_campo', 'apotecario'] },
+    herreria: { label: 'Herrería', maxLevel: 5, perks: ['templado', 'aleacion', 'balanceado', 'forja_maestra'] },
+    comercio: { label: 'Comercio', maxLevel: 5, perks: ['regateo', 'ruta_segura', 'red_mercante', 'prestigio'] },
+    exploracion: { label: 'Exploración', maxLevel: 5, perks: ['paso_ligero', 'campamento', 'senderista', 'pionero'] },
+  };
   const ITEMS = {
-    anzuelo:   { psCost: 15, aceroCost: 3, rocaCost: 0, esmeCost: 0, kind: 'weapon', maxDamage: 20 },
-    daga:      { psCost: 20, aceroCost: 5, rocaCost: 2, esmeCost: 0, kind: 'weapon', maxDamage: 35 },
-    lanza:     { psCost: 25, aceroCost: 5, rocaCost: 10, esmeCost: 0, kind: 'weapon', maxDamage: 40 },
-    espada:    { psCost: 30, aceroCost: 15, rocaCost: 20, esmeCost: 0, kind: 'weapon', maxDamage: 55 },
-    tridente:  { psCost: 50, aceroCost: 30, rocaCost: 30, esmeCost: 3, kind: 'weapon', maxDamage: 80 },
-
-    alimento:  { psCost: 3, kind: 'food', hunger: 4 },
-    sushi:     { psCost: 4, kind: 'food', hunger: 6 },
-    ensalada:  { psCost: 2, kind: 'food', hunger: 3, hp: 5 },
-    sashimi:   { psCost: 5, kind: 'food', hunger: 3, hp: 10 },
-    carpaccio: { psCost: 7, kind: 'food', hunger: 5, hp: 11 },
-
-    roca:      { psCost: 0, kind: 'material' },
-    acero:     { psCost: 0, kind: 'material' },
-    esmeralda: { psCost: 0, kind: 'material' },
+    anzuelo:{kind:'weapon',category:'arma',maxDamage:20,craft:{ps:15,acero:3}}, daga:{kind:'weapon',category:'arma',maxDamage:35,craft:{ps:20,acero:5,roca:2}},
+    lanza:{kind:'weapon',category:'arma',maxDamage:40,craft:{ps:25,acero:5,roca:10}}, espada:{kind:'weapon',category:'arma',maxDamage:55,craft:{ps:30,acero:15,roca:20}},
+    tridente:{kind:'weapon',category:'arma',maxDamage:80,craft:{ps:50,acero:30,roca:30,esmeralda:3}}, baston_electrico:{kind:'weapon',category:'steampunk',maxDamage:68,craft:{ps:35,acero:12,cobre:8,engranaje:4}},
+    estoque_victoriano:{kind:'weapon',category:'victoriano',maxDamage:62,craft:{ps:33,acero:10,madera:2}}, llave_inglesa_pesada:{kind:'weapon',category:'herreria',maxDamage:58,craft:{ps:30,acero:14,tornillo:8}},
+    alimento:{kind:'food',category:'consumible',hunger:4,craft:{ps:3}}, sushi:{kind:'food',category:'consumible',hunger:6,craft:{ps:4}},
+    ensalada:{kind:'food',category:'consumible',hunger:3,hp:5,craft:{ps:2,hierbas:1}}, sashimi:{kind:'food',category:'consumible',hunger:3,hp:10,craft:{ps:5}},
+    carpaccio:{kind:'food',category:'consumible',hunger:5,hp:11,craft:{ps:7}}, te_negro:{kind:'food',category:'victoriano',hunger:2,hp:6,craft:{ps:2,hierbas:1}},
+    pan_de_miel:{kind:'food',category:'consumible',hunger:5,hp:4,craft:{ps:3,resina:1}}, tonico_curativo:{kind:'consumable',category:'medicina',hp:18,craft:{ps:5,hierbas:3,alcohol:1}},
+    vendaje:{kind:'consumable',category:'medicina',hp:8,craft:{ps:2,tela:2}}, aceite_lampara:{kind:'consumable',category:'exploracion',craft:{ps:2,resina:1,carbon:1}},
+    roca:{kind:'material'}, acero:{kind:'material'}, esmeralda:{kind:'material'}, madera:{kind:'material'}, hierbas:{kind:'material'}, resina:{kind:'material'},
+    cobre:{kind:'material'}, carbon:{kind:'material'}, tela:{kind:'material'}, alcohol:{kind:'material'}, engranaje:{kind:'material'}, resorte:{kind:'material'},
+    tornillo:{kind:'material'}, tuberia:{kind:'material'}, cristal:{kind:'material'}, cuero:{kind:'material'}, reloj_bolsillo:{kind:'trade',craft:{ps:4,acero:1,cristal:1}},
+    automata_miniatura:{kind:'decor',craft:{ps:8,engranaje:3,resorte:2,cobre:2}}, lampara_gas:{kind:'decor',craft:{ps:5,tuberia:2,cristal:1,carbon:1}},
+    fonografo_portatil:{kind:'decor',craft:{ps:9,madera:2,engranaje:2,acero:2}}, baston_tallado:{kind:'tool',craft:{ps:4,madera:3}},
+    kit_cirujano:{kind:'tool',craft:{ps:7,acero:2,tela:2,alcohol:1}}, martillo_forja:{kind:'tool',craft:{ps:6,acero:3,madera:1}},
+  };
+  const ZONE_LOOT_TABLES = {
+    100:{zone:'llanura',gemsFactor:1,loot:[['roca',35],['acero',18],['madera',12],['hierbas',8],['cobre',6]]},
+    70:{zone:'bosque',gemsFactor:0.9,loot:[['madera',38],['hierbas',24],['resina',16],['cuero',8],['roca',10]]},
+    50:{zone:'mina',gemsFactor:1.1,loot:[['acero',22],['cobre',24],['carbon',20],['cristal',8],['esmeralda',6]]},
+    30:{zone:'ruinas',gemsFactor:1.2,loot:[['engranaje',24],['resorte',16],['tornillo',26],['tuberia',16],['cristal',10]]},
   };
 
   const seenChatNodes = new WeakSet();
@@ -179,7 +194,24 @@
     user.weapon = user.weapon || null;
     user.searchRechargeAt = Array.isArray(user.searchRechargeAt) ? user.searchRechargeAt : [];
     user.createdAt = user.createdAt || now();
+    user.specialties = user.specialties && typeof user.specialties === 'object' ? user.specialties : {};
+    user.perks = Array.isArray(user.perks) ? user.perks : [];
+    user.xp = Number.isFinite(user.xp) ? user.xp : 0;
+    for (const key of Object.keys(SPECIALTY_CONFIG)) {
+      const current = user.specialties[key];
+      user.specialties[key] = Number.isFinite(current) ? Math.max(0, current) : 0;
+    }
     return user;
+  }
+
+  function migrateLegacyItemConfig() {
+    for (const item of Object.values(ITEMS)) {
+      if (!item.craft) item.craft = {};
+      if (Number.isFinite(item.psCost)) item.craft.ps = item.psCost;
+      if (Number.isFinite(item.aceroCost)) item.craft.acero = item.aceroCost;
+      if (Number.isFinite(item.rocaCost)) item.craft.roca = item.rocaCost;
+      if (Number.isFinite(item.esmeCost)) item.craft.esmeralda = item.esmeCost;
+    }
   }
 
   function pruneSearchRecharge(user) {
@@ -1135,10 +1167,11 @@
     const item = ITEMS[itemKey];
     if (!item || item.kind === 'material') return { ok: false, reason: 'Objeto inválido.' };
 
-    const costPs = item.psCost || 0;
-    const costAcero = item.aceroCost || 0;
-    const costRoca = item.rocaCost || 0;
-    const costEsme = item.esmeCost || 0;
+    const craft = item.craft || {};
+    const costPs = craft.ps || 0;
+    const costAcero = craft.acero || 0;
+    const costRoca = craft.roca || 0;
+    const costEsme = craft.esmeralda || 0;
 
     if (user.hp < costPs) return { ok: false, reason: 'PS insuficientes.' };
     if ((user.inventory.filter(x => x === 'acero').length) < costAcero) return { ok: false, reason: 'Acero insuficiente.' };
@@ -1149,6 +1182,14 @@
     for (let i = 0; i < costAcero; i++) spendFromInventory(user, 'acero', 1);
     for (let i = 0; i < costRoca; i++) spendFromInventory(user, 'roca', 1);
     for (let i = 0; i < costEsme; i++) spendFromInventory(user, 'esmeralda', 1);
+    for (const [mat, qty] of Object.entries(craft)) {
+      if (['ps', 'acero', 'roca', 'esmeralda'].includes(mat)) continue;
+      if ((user.inventory.filter(x => x === mat).length) < qty) return { ok: false, reason: `${mat} insuficiente.` };
+    }
+    for (const [mat, qty] of Object.entries(craft)) {
+      if (['ps', 'acero', 'roca', 'esmeralda'].includes(mat)) continue;
+      for (let i = 0; i < qty; i++) spendFromInventory(user, mat, 1);
+    }
 
     if (item.kind === 'weapon') {
       user.weapon = itemKey;
@@ -1174,7 +1215,7 @@
       return true;
     }
 
-    if (item.kind === 'food') {
+    if (item.kind === 'food' || item.kind === 'consumable') {
       if (Number.isFinite(item.hunger)) user.hunger = Math.min(10, user.hunger + item.hunger);
       if (Number.isFinite(item.hp)) user.hp = Math.min(user.maxHp, user.hp + item.hp);
       return true;
@@ -1291,14 +1332,25 @@
     }
 
     useSearchCharge(user);
-    const gain = Number((roll / 10).toFixed(1));
+    const zoneCfg = ZONE_LOOT_TABLES[100] || { gemsFactor: 1, loot: [] };
+    const zoneByRoll = ZONE_LOOT_TABLES[Math.floor(roll)] || zoneCfg;
+    const gain = Number(((roll / 10) * (zoneByRoll.gemsFactor || 1)).toFixed(1));
     user.gems = Number((user.gems + gain).toFixed(1));
+    const rollPool = Math.random() * 100;
+    let acc = 0;
+    let foundMaterial = null;
+    for (const [itemKey, chance] of zoneByRoll.loot || []) {
+      acc += chance;
+      if (rollPool <= acc) { foundMaterial = itemKey; break; }
+    }
+    if (foundMaterial) user.inventory.push(foundMaterial);
+    user.specialties.recoleccion = (user.specialties.recoleccion || 0) + 1;
 
     users[userId] = ensureUserShape(user);
     rebuildIndexes();
     saveData();
 
-    enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} buscó joyas y obtuvo ${gain} joyas.`);
+    enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} exploró ${zoneByRoll.zone} y obtuvo ${gain} joyas${foundMaterial ? ` + ${foundMaterial}` : ''}.`);
     enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} — 【❤${user.hp}】 ⊹ 【🥪${user.hunger}】 ⊹ 【💎${user.gems}】`);
     return true;
   }
@@ -1374,10 +1426,28 @@
           return true;
         }
         const u = getUserById(id);
+        const specs = Object.entries(u.specialties || {}).filter(([, v]) => v > 0).map(([k, v]) => `${k}:${v}`).join(', ') || '—';
         enqueueWhisper(authorName,
-          `— ${getInfoLabelForUser(id)} — ❤${u.hp}/${u.maxHp} ⊹ 🥪${u.hunger} ⊹ 💎${u.gems.toFixed(1)} ⊹ 🔥${u.maxDamage} ⊹ Apodos: ${u.aliases.length ? u.aliases.join(', ') : '—'}`,
+          `— ${getInfoLabelForUser(id)} — ❤${u.hp}/${u.maxHp} ⊹ 🥪${u.hunger} ⊹ 💎${u.gems.toFixed(1)} ⊹ 🔥${u.maxDamage} ⊹ Esp: ${specs} ⊹ Apodos: ${u.aliases.length ? u.aliases.join(', ') : '—'}`,
           authorName
         );
+        return true;
+      }
+      case '!especialidad': {
+        const spec = normalizeName(args[0] || '');
+        const points = Math.max(1, parseInt(args[1] || '1', 10) || 1);
+        const u = ensureUserShape(getUserById(authorId));
+        if (!SPECIALTY_CONFIG[spec]) {
+          enqueueWhisper(authorName, `Especialidades: ${Object.keys(SPECIALTY_CONFIG).join(', ')}`, authorName);
+          return true;
+        }
+        u.specialties[spec] = Math.min((SPECIALTY_CONFIG[spec].maxLevel || 5) * 20, (u.specialties[spec] || 0) + points);
+        users[authorId] = u; rebuildIndexes(); saveData();
+        enqueueWhisper(authorName, `Progreso en ${spec}: ${u.specialties[spec]}.`, authorName);
+        return true;
+      }
+      case '!zonas': {
+        enqueueWhisper(authorName, `Zonas: ${Object.entries(ZONE_LOOT_TABLES).map(([k,v]) => `${k}->${v.zone}`).join(' || ')}`, authorName);
         return true;
       }
 
@@ -1611,6 +1681,7 @@
   }
 
   function init() {
+    migrateLegacyItemConfig();
     loadData();
     rebuildIndexes();
     createPanel();
