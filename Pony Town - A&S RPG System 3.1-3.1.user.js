@@ -14,6 +14,9 @@
   const STORAGE_KEY = 'AANDS_RPG_SYSTEM_v3_1';
   const SEARCH_MAX_CHARGES = 3;
   const SEARCH_RECHARGE_MS = 180000;
+  const BASE_INVENTORY_LIMIT = 20;
+  const HUNGER_MAX = 70;
+  const PERSONAL_MISSION_COOLDOWN = 30 * 60 * 1000;
 
   const SELECTORS = {
     chatLog: '.chat-log',
@@ -70,13 +73,30 @@
     tornillo:{kind:'material'}, tuberia:{kind:'material'}, cristal:{kind:'material'}, cuero:{kind:'material'}, reloj_bolsillo:{kind:'trade',craft:{ps:4,acero:1,cristal:1}},
     automata_miniatura:{kind:'decor',craft:{ps:8,engranaje:3,resorte:2,cobre:2}}, lampara_gas:{kind:'decor',craft:{ps:5,tuberia:2,cristal:1,carbon:1}},
     fonografo_portatil:{kind:'decor',craft:{ps:9,madera:2,engranaje:2,acero:2}}, baston_tallado:{kind:'tool',craft:{ps:4,madera:3}},
-    kit_cirujano:{kind:'tool',craft:{ps:7,acero:2,tela:2,alcohol:1}}, martillo_forja:{kind:'tool',craft:{ps:6,acero:3,madera:1}},
+    kit_cirujano:{kind:'tool',category:'medicina',desc:'Herramientas para tratar heridas.',effect:'mejora medicina',craft:{ps:7,acero:2,tela:2,alcohol:1}}, martillo_forja:{kind:'tool',category:'herreria',desc:'Martillo pesado de forja.',effect:'mejora herreria',craft:{ps:6,acero:3,madera:1}}, mochila_viajera:{kind:'util',category:'equipo',desc:'Mochila reforzada.',effect:'+8 capacidad',inventoryBonus:8,craft:{ps:8,tela:3,cuero:2}},
   };
   const ZONE_LOOT_TABLES = {
-    100:{zone:'llanura',gemsFactor:1,loot:[['roca',35],['acero',18],['madera',12],['hierbas',8],['cobre',6]]},
-    70:{zone:'bosque',gemsFactor:0.9,loot:[['madera',38],['hierbas',24],['resina',16],['cuero',8],['roca',10]]},
-    50:{zone:'mina',gemsFactor:1.1,loot:[['acero',22],['cobre',24],['carbon',20],['cristal',8],['esmeralda',6]]},
-    30:{zone:'ruinas',gemsFactor:1.2,loot:[['engranaje',24],['resorte',16],['tornillo',26],['tuberia',16],['cristal',10]]},
+    100:{zone:'ciudad',gemsFactor:1,loot:[['roca',20],['acero',20],['tela',16],['cristal',10],['reloj_bolsillo',4]]},
+    80:{zone:'bosque',gemsFactor:1.05,loot:[['madera',35],['hierbas',26],['resina',18],['cuero',10],['pan_de_miel',5]]},
+    60:{zone:'mina',gemsFactor:1.15,loot:[['acero',24],['cobre',28],['carbon',20],['cristal',12],['esmeralda',8]]},
+    50:{zone:'puerto',gemsFactor:1.1,loot:[['anzuelo',12],['sushi',18],['tuberia',18],['alcohol',20],['madera',20]]},
+    40:{zone:'jardin_botanico',gemsFactor:1.2,loot:[['hierbas',30],['tonico_curativo',12],['ensalada',12],['resina',10],['esmeralda',4]]},
+  };
+
+  
+  const JOB_CONFIG = {
+    guardia:{durationMs:12*60*1000,xp:26,gems:18,tempInventory:['espada','vendaje','vendaje'],products:['roca']},
+    sastre:{durationMs:12*60*1000,xp:24,gems:16,tempInventory:['tela','tela','cuero','vendaje'],products:['tela']},
+    medico:{durationMs:12*60*1000,xp:30,gems:20,tempInventory:['vendaje','vendaje','tonico_curativo','hierbas','alcohol'],products:['vendaje']},
+    farmaceutico:{durationMs:12*60*1000,xp:30,gems:20,tempInventory:['hierbas','hierbas','alcohol','tonico_curativo'],products:['tonico_curativo']},
+    herrero:{durationMs:12*60*1000,xp:32,gems:22,tempInventory:['martillo_forja','acero','acero','carbon','tornillo'],products:['acero','tornillo']},
+    bartender:{durationMs:10*60*1000,xp:20,gems:18,tempInventory:['alcohol','te_negro','sushi'],products:['alcohol']},
+    agricultor:{durationMs:10*60*1000,xp:22,gems:16,tempInventory:['hierbas','madera','pan_de_miel'],products:['hierbas']},
+    minero:{durationMs:12*60*1000,xp:28,gems:20,tempInventory:['roca','acero','cobre','carbon'],products:['cobre','carbon']},
+    pescador:{durationMs:10*60*1000,xp:20,gems:16,tempInventory:['anzuelo','sashimi','sushi'],products:['sashimi']},
+    recolector:{durationMs:10*60*1000,xp:20,gems:16,tempInventory:['hierbas','resina','madera'],products:['resina']},
+    mensajero:{durationMs:8*60*1000,xp:18,gems:14,tempInventory:['reloj_bolsillo'],products:['reloj_bolsillo']},
+    mecanico:{durationMs:12*60*1000,xp:30,gems:21,tempInventory:['llave_inglesa_pesada','engranaje','tornillo','tuberia'],products:['engranaje','tornillo']},
   };
 
   const seenChatNodes = new WeakSet();
@@ -196,7 +216,14 @@
     user.createdAt = user.createdAt || now();
     user.specialties = user.specialties && typeof user.specialties === 'object' ? user.specialties : {};
     user.perks = Array.isArray(user.perks) ? user.perks : [];
+    user.level = Number.isFinite(user.level) ? user.level : 1;
     user.xp = Number.isFinite(user.xp) ? user.xp : 0;
+    user.talentPoints = Number.isFinite(user.talentPoints) ? user.talentPoints : 0;
+    user.job = user.job || { requested:null, approved:null, active:null };
+    user.jobTempItems = Array.isArray(user.jobTempItems) ? user.jobTempItems : [];
+    user.states = Array.isArray(user.states) ? user.states : [];
+    user.personalMission = user.personalMission || null;
+    user.nextMissionAt = Number.isFinite(user.nextMissionAt) ? user.nextMissionAt : 0;
     for (const key of Object.keys(SPECIALTY_CONFIG)) {
       const current = user.specialties[key];
       user.specialties[key] = Number.isFinite(current) ? Math.max(0, current) : 0;
@@ -1112,10 +1139,70 @@
     return null;
   }
 
-  function detectRollTo100(text) {
-    const m = String(text || '').match(/🎲\s*Rolled[:\s]*([0-9]{1,3}(?:\.[0-9]+)?)\s*of\s*100/i) ||
-              String(text || '').match(/Rolled[:\s]*([0-9]{1,3}(?:\.[0-9]+)?)\s*of\s*100/i);
-    return m ? Number(m[1]) : null;
+  function detectRoll(text) {
+    const m = String(text || '').match(/🎲\s*Rolled[:\s]*([0-9]{1,3}(?:\.[0-9]+)?)\s*of\s*([0-9]{2,3})/i) || String(text || '').match(/Rolled[:\s]*([0-9]{1,3}(?:\.[0-9]+)?)\s*of\s*([0-9]{2,3})/i);
+    if (!m) return null;
+    return { value:Number(m[1]), sides:Number(m[2]) };
+  }
+
+  
+  function xpForNextLevel(level) { return 40 + (level * 30); }
+  function getInventoryLimit(user) {
+    let limit = BASE_INVENTORY_LIMIT;
+    for (const it of (user.inventory || [])) {
+      const def = ITEMS[it];
+      if (def && Number.isFinite(def.inventoryBonus)) limit += def.inventoryBonus;
+    }
+    return limit;
+  }
+  function canReceiveItem(user, count = 1) {
+    return (user.inventory.length + count) <= getInventoryLimit(user);
+  }
+  function grantXp(user, amount, reason='') {
+    if (!user || amount <= 0) return null;
+    user.xp += amount;
+    const messages = [];
+    while (user.xp >= xpForNextLevel(user.level)) {
+      user.xp -= xpForNextLevel(user.level);
+      user.level += 1;
+      user.maxHp += 5;
+      user.hp = Math.min(user.maxHp, user.hp + 5);
+      user.maxDamage += 1;
+      user.talentPoints += 1;
+      messages.push(`⬆️ ${getLabelForUser(user.id)} subió a nivel ${user.level}. (+5 PS max, +1 daño max, +1 talento)`);
+    }
+    return messages;
+  }
+  function applyActionCosts(user, hpCost=0, hungerCost=0) {
+    user.hp = Math.max(0, user.hp - hpCost);
+    user.hunger = Math.max(0, user.hunger - hungerCost);
+  }
+  function makeMission() {
+    const templates = [
+      {type:'craft', item:'pan_de_miel', need:1, text:'Craftea pan_de_miel', xp:24, gems:3},
+      {type:'collect', item:'cobre', need:3, text:'Recolecta 3 cobre', xp:26, gems:2},
+      {type:'deliver', item:'vendaje', need:1, text:'Entrega 1 vendaje', xp:22, gems:3},
+      {type:'gems', need:15, text:'Consigue 15 joyas', xp:22, gems:0},
+    ];
+    const m = templates[Math.floor(Math.random()*templates.length)];
+    return {...m, progress:0, createdAt:now()};
+  }
+
+  
+  function tickMission(user, event, payload={}) {
+    const m = user.personalMission;
+    if (!m) return;
+    if (m.type === 'craft' && event==='craft' && payload.item===m.item) m.progress += 1;
+    if (m.type === 'collect' && event==='collect' && payload.item===m.item) m.progress += 1;
+    if (m.type === 'deliver' && event==='deliver') m.progress += payload.count || 1;
+    if (m.type === 'gems' && event==='gems') m.progress += payload.amount || 0;
+    if (m.progress >= m.need) {
+      m.progress = m.need;
+      grantXp(user, m.xp, 'mision');
+      user.gems = Number((user.gems + (m.gems||0)).toFixed(1));
+      enqueuePublic(`${formatActionPrefix('📜✦')} ${getLabelForUser(user.id)} completó misión personal: ${m.text}.`);
+      user.personalMission = null;
+    }
   }
 
   function getStatusAction(status) {
@@ -1153,7 +1240,9 @@
     const to = getUserById(toId);
     if (!from || !to) return false;
     if (!spendFromInventory(from, itemKey, count)) return false;
+    if (!canReceiveItem(to, count)) return false;
     for (let i = 0; i < count; i++) to.inventory.push(itemKey);
+    tickMission(from,'deliver',{count});
     users[fromId] = ensureUserShape(from);
     users[toId] = ensureUserShape(to);
     rebuildIndexes();
@@ -1196,10 +1285,13 @@
       user.maxDamage = item.maxDamage || user.maxDamage;
     }
 
+    if (!canReceiveItem(user, 1)) return { ok:false, reason:"Inventario lleno." };
     user.inventory.push(itemKey);
     users[userId] = ensureUserShape(user);
     rebuildIndexes();
     saveData();
+    grantXp(user, 10, "crafteo");
+    tickMission(user,'craft',{item:itemKey});
     return { ok: true, user };
   }
 
@@ -1216,7 +1308,7 @@
     }
 
     if (item.kind === 'food' || item.kind === 'consumable') {
-      if (Number.isFinite(item.hunger)) user.hunger = Math.min(10, user.hunger + item.hunger);
+      if (Number.isFinite(item.hunger)) user.hunger = Math.min(HUNGER_MAX, user.hunger + item.hunger);
       if (Number.isFinite(item.hp)) user.hp = Math.min(user.maxHp, user.hp + item.hp);
       return true;
     }
@@ -1240,6 +1332,7 @@
     if (attacker.hunger > 0) attacker.hunger = Math.max(0, attacker.hunger - hungerCost);
     else attacker.hp = Math.max(0, attacker.hp - hungerCost);
 
+    grantXp(attacker, 8, "ataque");
     users[attackerId] = ensureUserShape(attacker);
     users[targetId] = ensureUserShape(target);
     rebuildIndexes();
@@ -1307,6 +1400,8 @@
       users[targetId] = ensureUserShape(target);
       rebuildIndexes();
       saveData();
+      tickMission(user,'gems',{amount:gain});
+      grantXp(user, 4, "abono");
       enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} abonó ${gain} joyas a ${getLabelForUser(targetId)}.`);
       enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} — 【❤${user.hp}】 ⊹ 【🥪${user.hunger}】 ⊹ 【💎${user.gems}】`);
       enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(targetId)} — 【❤${target.hp}】 ⊹ 【🥪${target.hunger}】 ⊹ 【💎${target.gems}】`);
@@ -1314,7 +1409,7 @@
   }
 
   function handleSearchGems(userId, text) {
-    const roll = detectRollTo100(text);
+    const roll = detectRoll(text);
     if (roll === null) return false;
 
     const user = getUserById(userId);
@@ -1332,9 +1427,10 @@
     }
 
     useSearchCharge(user);
-    const zoneCfg = ZONE_LOOT_TABLES[100] || { gemsFactor: 1, loot: [] };
-    const zoneByRoll = ZONE_LOOT_TABLES[Math.floor(roll)] || zoneCfg;
-    const gain = Number(((roll / 10) * (zoneByRoll.gemsFactor || 1)).toFixed(1));
+    const zoneKey = roll.sides;
+    const zoneByRoll = ZONE_LOOT_TABLES[zoneKey] || ZONE_LOOT_TABLES[100];
+    const normalizedRoll = Math.max(1, Math.min(roll.value, roll.sides)) / roll.sides;
+    const gain = Number((normalizedRoll * 15 * (zoneByRoll.gemsFactor || 1)).toFixed(1));
     user.gems = Number((user.gems + gain).toFixed(1));
     const rollPool = Math.random() * 100;
     let acc = 0;
@@ -1343,14 +1439,16 @@
       acc += chance;
       if (rollPool <= acc) { foundMaterial = itemKey; break; }
     }
-    if (foundMaterial) user.inventory.push(foundMaterial);
+    if (foundMaterial && canReceiveItem(user,1)) { user.inventory.push(foundMaterial); tickMission(user,'collect',{item:foundMaterial}); }
+    tickMission(user,'gems',{amount:gain});
+    applyActionCosts(user,4,4);
     user.specialties.recoleccion = (user.specialties.recoleccion || 0) + 1;
 
     users[userId] = ensureUserShape(user);
     rebuildIndexes();
     saveData();
 
-    enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} exploró ${zoneByRoll.zone} y obtuvo ${gain} joyas${foundMaterial ? ` + ${foundMaterial}` : ''}.`);
+    enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} exploró ${zoneByRoll.zone} (${roll.value}/${roll.sides}) y obtuvo ${gain} joyas${foundMaterial ? ` + ${foundMaterial}` : ''}.`);
     enqueuePublic(`${formatActionPrefix('💎✦')} ${getLabelForUser(userId)} — 【❤${user.hp}】 ⊹ 【🥪${user.hunger}】 ⊹ 【💎${user.gems}】`);
     return true;
   }
@@ -1421,16 +1519,18 @@
       case '!info': {
         const ref = args.join(' ').trim() || authorName;
         const id = getUserIdByRef(ref);
-        if (!id) {
-          enqueueWhisper(authorName, 'No registrado.', authorName);
-          return true;
-        }
+        if (!id) { enqueueWhisper(authorName, 'No registrado.', authorName); return true; }
         const u = getUserById(id);
-        const specs = Object.entries(u.specialties || {}).filter(([, v]) => v > 0).map(([k, v]) => `${k}:${v}`).join(', ') || '—';
-        enqueueWhisper(authorName,
-          `— ${getInfoLabelForUser(id)} — ❤${u.hp}/${u.maxHp} ⊹ 🥪${u.hunger} ⊹ 💎${u.gems.toFixed(1)} ⊹ 🔥${u.maxDamage} ⊹ Esp: ${specs} ⊹ Apodos: ${u.aliases.length ? u.aliases.join(', ') : '—'}`,
-          authorName
-        );
+        enqueueWhisper(authorName, `— ${getInfoLabelForUser(id)} — Nv.${u.level} XP ${u.xp}/${xpForNextLevel(u.level)} ❤${u.hp}/${u.maxHp} 🥪${u.hunger}/${HUNGER_MAX} 💎${u.gems.toFixed(1)} 🔥${u.maxDamage} Inv:${u.inventory.length}/${getInventoryLimit(u)}`, authorName);
+        return true;
+      }
+      case '!moreinfo': {
+        const id = getUserIdByRef(args.join(' ').trim() || authorName);
+        if (!id) { enqueueWhisper(authorName, 'No registrado.', authorName); return true; }
+        const u = getUserById(id);
+        const specs = Object.entries(u.specialties || {}).map(([k,v])=>`${k}:${v}`).join(', ');
+        const states = (u.states||[]).map(st=>`${st.name}(${Math.max(0,Math.ceil((st.expiresAt-now())/1000))}s)`).join(', ') || '—';
+        enqueueWhisper(authorName, `Talentos:${u.talentPoints} | Esp: ${specs||'—'} | Trabajo:${u.job?.approved||'ninguno'} | Estados:${states} | Misión:${u.personalMission?.text||'—'}`, authorName);
         return true;
       }
       case '!especialidad': {
@@ -1441,9 +1541,14 @@
           enqueueWhisper(authorName, `Especialidades: ${Object.keys(SPECIALTY_CONFIG).join(', ')}`, authorName);
           return true;
         }
-        u.specialties[spec] = Math.min((SPECIALTY_CONFIG[spec].maxLevel || 5) * 20, (u.specialties[spec] || 0) + points);
+        const maxLvl = SPECIALTY_CONFIG[spec].maxLevel || 5;
+        const current = u.specialties[spec] || 0;
+        const spend = Math.min(points, u.talentPoints);
+        const next = Math.min(maxLvl, current + spend);
+        u.specialties[spec] = next;
+        u.talentPoints -= Math.max(0, next-current);
         users[authorId] = u; rebuildIndexes(); saveData();
-        enqueueWhisper(authorName, `Progreso en ${spec}: ${u.specialties[spec]}.`, authorName);
+        enqueueWhisper(authorName, `Especialidad ${spec}: nivel ${u.specialties[spec]}/${maxLvl}. Talentos restantes: ${u.talentPoints}.`, authorName);
         return true;
       }
       case '!zonas': {
@@ -1522,6 +1627,31 @@
         enqueueWhisper(authorName, `Inventario actualizado de ${getPublicName(id)}.`, authorName);
         return true;
       }
+
+
+      case '!miarbol': {
+        const u = getUserById(authorId);
+        enqueueWhisper(authorName, Object.entries(SPECIALTY_CONFIG).map(([k,v])=>`${k}:${u.specialties[k]||0}/${v.maxLevel}`).join(' || '), authorName); return true;
+      }
+      case '!miespecialidad': {
+        const spec = normalizeName(args[0]||'');
+        const u = getUserById(authorId); const c = SPECIALTY_CONFIG[spec];
+        if (!c) { enqueueWhisper(authorName,'Especialidad inválida.',authorName); return true; }
+        enqueueWhisper(authorName, `${c.label}: nivel ${u.specialties[spec]||0}/${c.maxLevel}. Perks: ${c.perks.join(', ')}`, authorName); return true;
+      }
+      case '!iteminfo': {
+        const k = normalizeName(args[0]||''); const it=ITEMS[k]; if(!it){enqueueWhisper(authorName,'Item inválido.',authorName); return true;}
+        enqueueWhisper(authorName, `${k} | cat:${it.category||it.kind} | ${it.desc||'Sin descripción'} | efecto:${it.effect||'—'}`, authorName); return true;
+      }
+      case '!itemhow': {
+        const k = normalizeName(args[0]||''); const it=ITEMS[k]; if(!it){enqueueWhisper(authorName,'Item inválido.',authorName); return true;}
+        const c=it.craft?Object.entries(it.craft).map(([a,b])=>`${a}x${b}`).join(', '):'no crafteable';
+        enqueueWhisper(authorName, `${k}: ${c}. Zonas: revisa !zonas para drops.`, authorName); return true;
+      }
+      case '!empleo': { const job=normalizeName(args[0]||''); const u=getUserById(authorId); if(!JOB_CONFIG[job]){enqueueWhisper(authorName,'Empleo inválido.',authorName);return true;} u.job.requested=job; users[authorId]=u; saveData(); enqueueWhisper(authorName,`Solicitud enviada: ${job}.`,authorName); return true; }
+      case '!trabajar': { const u=getUserById(authorId); const job=u.job?.approved; if(!job||!JOB_CONFIG[job]){enqueueWhisper(authorName,'No tienes empleo aprobado.',authorName); return true;} const cfg=JOB_CONFIG[job]; u.job.active={name:job,startAt:now(),endsAt:now()+cfg.durationMs}; u.jobTempItems=[...cfg.tempInventory]; for(const it of cfg.tempInventory){ if(canReceiveItem(u,1)) u.inventory.push(it);} grantXp(u,6,'trabajar'); users[authorId]=u; saveData(); enqueueWhisper(authorName,`Turno iniciado (${job}) por ${formatDuration(cfg.durationMs)}.`,authorName); return true; }
+      case '!terminar': { const u=getUserById(authorId); if(!u.job?.active){enqueueWhisper(authorName,'No estás en turno.',authorName); return true;} const cfg=JOB_CONFIG[u.job.active.name]; const ratio=Math.max(0.1,Math.min(1,(now()-u.job.active.startAt)/cfg.durationMs)); const g=Number((cfg.gems*ratio).toFixed(1)); u.gems=Number((u.gems+g).toFixed(1)); grantXp(u,Math.floor(cfg.xp*ratio),'trabajo'); for(const it of (u.jobTempItems||[])){ const idx=u.inventory.indexOf(it); if(idx!==-1) u.inventory.splice(idx,1);} u.jobTempItems=[]; u.job.active=null; u.hunger=Math.max(0,u.hunger-6); users[authorId]=u; saveData(); enqueueWhisper(authorName,`Turno finalizado. +${g} joyas.`,authorName); return true; }
+      case '!misionpersonal': { const u=getUserById(authorId); if(u.personalMission){enqueueWhisper(authorName,`Misión activa: ${u.personalMission.text} (${u.personalMission.progress}/${u.personalMission.need})`,authorName); return true;} if(now()<u.nextMissionAt){enqueueWhisper(authorName,`Debes esperar ${formatDuration(u.nextMissionAt-now())}.`,authorName); return true;} u.personalMission=makeMission(); u.nextMissionAt=now()+PERSONAL_MISSION_COOLDOWN; users[authorId]=u; saveData(); enqueueWhisper(authorName,`Nueva misión: ${u.personalMission.text}`,authorName); return true; }
 
       default:
         return false;
